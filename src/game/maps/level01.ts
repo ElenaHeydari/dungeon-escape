@@ -1,12 +1,10 @@
 export const TILE_SIZE = 32;
 
-export const TileType = {
-  FLOOR: 0,
-  WALL: 1,
-  EXIT: 2,
-} as const;
-
-export type TileType = (typeof TileType)[keyof typeof TileType];
+export enum TileType {
+  FLOOR = 0,
+  WALL = 1,
+  EXIT = 2,
+}
 
 export const LEVEL_01_MAP: TileType[][] = [
   [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
