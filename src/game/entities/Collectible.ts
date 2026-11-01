@@ -2,7 +2,7 @@
 import Phaser from "phaser";
 import { TILE_SIZE } from "../maps/level01";
 
-export type CollectibleType = "key" | "treasure";
+export type CollectibleType = "key" | "treasure" | "potion";
 
 export class Collectible {
   private sprite: Phaser.GameObjects.Arc;
@@ -16,7 +16,13 @@ export class Collectible {
     offsetX: number,
     offsetY: number
   ) {
-    const color = type === "key" ? 0xf2b84b : 0xe6a84a;
+    const colors: Record<CollectibleType, number> = {
+        key: 0xf2b84b,
+        treasure: 0xe6a84a,
+        potion: 0xe65b65
+    };
+
+    const color = colors[type];
 
     this.sprite = scene.add.circle(
       offsetX + tileX * TILE_SIZE + TILE_SIZE / 2,

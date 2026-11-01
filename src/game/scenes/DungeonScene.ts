@@ -13,6 +13,8 @@ import { Collectible } from "../entities/Collectible";
 import { Enemy } from "../entities/enemies/Enemy";
 import { SlimeEnemy } from "../entities/enemies/SlimeEnemy";
 import { SkeletonEnemy } from "../entities/enemies/SkeletonEnemy";
+import { Inventory } from "../systems/Inventory";
+import { SaveManager } from "../systems/SaveManager";
 
 import { HealthSystem } from "../systems/HealthSystem";
 import { Trap } from "../systems/Trap";
@@ -50,6 +52,13 @@ export class DungeonScene extends Phaser.Scene {
   private messageText!: Phaser.GameObjects.Text;
   private gameOverText?: Phaser.GameObjects.Text;
 
+  private inventory!: Inventory;
+  private potionKey!: Phaser.Input.Keyboard.Key;
+  private pauseKey!: Phaser.Input.Keyboard.Key;
+
+  private isPaused = false;
+  private pauseOverlay?: Phaser.GameObjects.Container;
+
   constructor() {
     super("DungeonScene");
   }
@@ -58,11 +67,12 @@ export class DungeonScene extends Phaser.Scene {
     this.completed = false;
     this.hasKey = false;
     this.score = 0;
-
+    
     this.collectibles = [];
     this.enemies = [];
     this.traps = [];
-
+    
+    this.inventory = new Inventory();
     this.health = new HealthSystem(3, 1000);
 
     this.cameras.main.setBackgroundColor("#101820");
@@ -73,6 +83,7 @@ export class DungeonScene extends Phaser.Scene {
     this.createEnemies();
     this.createTraps();
     this.createHUD();
+    void this.loadSavedProgress();
     this.setupControls();
 
     this.events.once("shutdown", () => {
@@ -86,11 +97,30 @@ export class DungeonScene extends Phaser.Scene {
     });
   }
 
+  
   update(_time: number, delta: number): void {
     if (this.completed) {
       if (Phaser.Input.Keyboard.JustDown(this.restartKey)) {
         this.scene.restart();
       }
+      return;
+    }
+
+    if (this.isPaused) {
+      if (Phaser.Input.Keyboard.JustDown(this.restartKey)) {
+        this.scene.restart();
+        return;
+      }
+
+      if (Phaser.Input.Keyboard.JustDown(this.pauseKey)) {
+        this.resumeGame();
+      }
+
+      return;
+    }
+
+    if (Phaser.Input.Keyboard.JustDown(this.pauseKey)) {
+      this.pauseGame();
       return;
     }
 
@@ -114,7 +144,14 @@ export class DungeonScene extends Phaser.Scene {
     if (Phaser.Input.Keyboard.JustDown(this.interactKey)) {
       this.tryInteract();
     }
+
+    if (Phaser.Input.Keyboard.JustDown(this.potionKey)) {
+      this.usePotion();
+    }
+
+
   }
+
 
   // ---------------- MAP ----------------
 
@@ -214,33 +251,51 @@ export class DungeonScene extends Phaser.Scene {
       ),
       new Collectible(
         this, "treasure", 10, 5, this.offsetX, this.offsetY
+      ),
+      new Collectible(
+        this, "potion", 2, 5, this.offsetX, this.offsetY
       )
     ];
   }
+
 
   private checkCollectibles(): void {
     for (const item of this.collectibles) {
       if (item.isCollected) continue;
 
       if (
-        item.tileX === this.player.x &&
-        item.tileY === this.player.y
+        item.tileX !== this.player.x ||
+        item.tileY !== this.player.y
       ) {
-        if (!item.collect()) continue;
-
-        if (item.type === "key") {
-          this.hasKey = true;
-          this.score += 100;
-          this.showMessage("Key collected!");
-        } else {
-          this.score += 150;
-          this.showMessage("Treasure collected!");
-        }
-
-        this.updateHUD();
+        continue;
       }
+
+      if (!item.collect()) continue;
+
+      switch (item.type) {
+        case "key":
+          this.hasKey = true;
+          this.inventory.add("key");
+          this.score += 100;
+          this.showMessage("Key collected! +100");
+          break;
+
+        case "treasure":
+          this.inventory.add("treasure");
+          this.score += 150;
+          this.showMessage("Treasure collected! +150");
+          break;
+
+        case "potion":
+          this.inventory.add("potion");
+          this.showMessage("Potion collected! Press H to use.");
+          break;
+      }
+
+      this.updateHUD();
     }
   }
+
 
   // ---------------- ENEMIES ----------------
 
@@ -325,6 +380,28 @@ export class DungeonScene extends Phaser.Scene {
     }
   }
 
+  //----------------- Potion --------------------
+
+  
+  private usePotion(): void {
+    if (!this.inventory.has("potion")) {
+      this.showMessage("You don't have a potion!");
+      return;
+    }
+
+    if (this.health.health >= this.health.max) {
+      this.showMessage("Your health is already full!");
+      return;
+    }
+
+    this.inventory.remove("potion");
+    this.health.heal(1);
+
+    this.showMessage("Health restored! +1");
+    this.updateHUD();
+  }
+
+
   // ---------------- HEALTH ----------------
 
   private onPlayerDamaged(): void {
@@ -371,6 +448,7 @@ export class DungeonScene extends Phaser.Scene {
     this.completeLevel();
   }
 
+  
   private completeLevel(): void {
     this.completed = true;
     this.score += 500;
@@ -381,7 +459,49 @@ export class DungeonScene extends Phaser.Scene {
     this.messageText.setText(
       `LEVEL COMPLETE! Final score: ${this.score} | Press R to restart`
     );
+
+    void this.saveProgress();
   }
+
+  private async saveProgress(): Promise<void> {
+    try {
+      const previousSave = await SaveManager.load();
+
+      const save = {
+        bestScore: Math.max(previousSave.bestScore, this.score),
+        unlockedLevel: Math.max(previousSave.unlockedLevel, 2),
+        completedLevels: Array.from(
+          new Set([...previousSave.completedLevels, 1])
+        )
+      };
+
+      await SaveManager.save(save);
+
+      this.showMessage(
+        `Level completed! Best score: ${save.bestScore}`
+      );
+    } catch (error) {
+      console.error("Could not save game progress:", error);
+      this.showMessage("Warning: Progress could not be saved.");
+    }
+  }
+
+  
+  private async loadSavedProgress(): Promise<void> {
+    try {
+      const save = await SaveManager.load();
+
+      console.info("Saved game progress:", save);
+
+      this.showMessage(
+        `Best Score: ${save.bestScore} | Unlocked Level: ${save.unlockedLevel}`
+      );
+    } catch (error) {
+      console.error("Could not load saved progress:", error);
+    }
+  }
+
+
 
   // ---------------- HUD ----------------
 
@@ -417,20 +537,73 @@ export class DungeonScene extends Phaser.Scene {
     this.updateHUD();
   }
 
+  
   private updateHUD(): void {
     const hearts =
       "♥".repeat(this.health.health) +
       "♡".repeat(this.health.max - this.health.health);
 
     this.hudText.setText(
-      `Health: ${hearts}     Score: ${this.score}     Key: ${this.hasKey ? "YES" : "NO"}`
+      `Health: ${hearts}     Score: ${this.score}     ` +
+      `Key: ${this.hasKey ? "YES" : "NO"}     ` +
+      `Potions: ${this.inventory.getCount("potion")}`
     );
   }
+
 
   private showMessage(message: string): void {
     this.messageText.setText(message);
     this.messageText.setColor("#f2b84b");
   }
+
+  // ---------------- Pause ---------------------
+
+  private pauseGame(): void {
+    this.isPaused = true;
+
+    this.tweens.pauseAll();
+
+    const background = this.add.rectangle(
+      400, 300, 800, 600, 0x000000, 0.75
+    );
+
+    const title = this.add.text(
+      400, 220, "PAUSED",
+      {
+        fontFamily: "Arial",
+        fontSize: "42px",
+        color: "#45d6c5"
+      }
+    ).setOrigin(0.5);
+
+    const instructions = this.add.text(
+      400, 310,
+      "Press ESC to Resume\nPress R to Restart",
+      {
+        fontFamily: "Arial",
+        fontSize: "20px",
+        color: "#e8eef2",
+        align: "center",
+        lineSpacing: 12
+      }
+    ).setOrigin(0.5);
+
+    this.pauseOverlay = this.add.container(
+      0, 0, [background, title, instructions]
+    );
+
+    this.pauseOverlay.setDepth(200);
+  }
+
+  private resumeGame(): void {
+    this.isPaused = false;
+
+    this.pauseOverlay?.destroy();
+    this.pauseOverlay = undefined;
+
+    this.tweens.resumeAll();
+  }
+
 
   // ---------------- GAME OVER ----------------
 
@@ -484,6 +657,14 @@ export class DungeonScene extends Phaser.Scene {
 
     this.restartKey = this.input.keyboard.addKey(
       Phaser.Input.Keyboard.KeyCodes.R
+    );
+
+    this.potionKey = this.input.keyboard.addKey(
+      Phaser.Input.Keyboard.KeyCodes.H
+    );
+
+    this.pauseKey = this.input.keyboard.addKey(
+      Phaser.Input.Keyboard.KeyCodes.ESC
     );
   }
 }
