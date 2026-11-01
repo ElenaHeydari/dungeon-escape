@@ -11,10 +11,12 @@ function App() {
 
       <GameCanvas />
 
+      
       <footer className="game-footer">
-        <span>WASD / Arrow Keys</span>
-        <span>Explore. Survive. Escape.</span>
+        <span>Move: WASD / Arrows</span>
+        <span>Attack: Space | Interact: E | Restart: R</span>
       </footer>
+
     </main>
   );
 }

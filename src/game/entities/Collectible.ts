@@ -40,4 +40,10 @@ export class Collectible {
   get isCollected(): boolean {
     return this.collected;
   }
+
+  
+  destroy(): void {
+    this.sprite.destroy();
+  }
+
 }
