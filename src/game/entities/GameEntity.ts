@@ -2,15 +2,14 @@
 import Phaser from "phaser";
 import {
   tileToWorld,
-  getIsometricDepth,
+  getEntityDepth,
 } from "../maps/isometric";
 
 export abstract class GameEntity {
-  protected sprite: Phaser.GameObjects.Rectangle;
+  protected sprite: Phaser.GameObjects.Container;
 
   protected tileX: number;
   protected tileY: number;
-
   protected moving = false;
 
   constructor(
@@ -31,16 +30,38 @@ export abstract class GameEntity {
       offsetY
     );
 
-    this.sprite = scene.add.rectangle(
+    const shadow = scene.add.ellipse(
+      0, 8, 25, 10, 0x000000, 0.4
+    );
+
+    const glow = scene.add.circle(
+      0, 0, 15, color, 0.13
+    );
+
+    const body = scene.add.ellipse(
+      0, 0, 23, 19, color
+    );
+
+    const highlight = scene.add.ellipse(
+      -5, -5, 7, 4, 0xffffff, 0.35
+    );
+
+    const leftEye = scene.add.circle(
+      -4, -1, 2.2, 0x101820
+    );
+
+    const rightEye = scene.add.circle(
+      4, -1, 2.2, 0x101820
+    );
+
+    this.sprite = scene.add.container(
       position.x,
       position.y,
-      22,
-      22,
-      color
+      [shadow, glow, body, highlight, leftEye, rightEye]
     );
 
     this.sprite.setDepth(
-      getIsometricDepth(x, y, 6)
+      getEntityDepth(x, y, 8)
     );
   }
 
@@ -75,7 +96,7 @@ export abstract class GameEntity {
     );
 
     this.sprite.setDepth(
-      getIsometricDepth(x, y, 6)
+      getEntityDepth(x, y, 8)
     );
 
     this.scene.tweens.add({
@@ -97,3 +118,4 @@ export abstract class GameEntity {
     this.sprite.destroy();
   }
 }
+

@@ -2,11 +2,11 @@
 import Phaser from "phaser";
 import {
   tileToWorld,
-  getIsometricDepth,
+  getEntityDepth,
 } from "../maps/isometric";
 
 export class Trap {
-  private sprite: Phaser.GameObjects.Rectangle;
+  private sprite: Phaser.GameObjects.Container;
 
   constructor(
     scene: Phaser.Scene,
@@ -22,18 +22,46 @@ export class Trap {
       offsetY
     );
 
-    this.sprite = scene.add.rectangle(
-      position.x,
-      position.y,
-      24,
-      14,
+    const glow = scene.add.ellipse(
+      0, 0, 30, 19, 0xe65b65, 0.16
+    );
+
+    const plate = scene.add.ellipse(
+      0, 2, 27, 15, 0x3b3039
+    ).setStrokeStyle(1, 0xe65b65, 0.9);
+
+    const spike1 = scene.add.triangle(
+      -8, -2,
+      0, -7,
+      -5, 4,
+      5, 4,
       0xe65b65
     );
 
-    this.sprite.setAlpha(0.85);
+    const spike2 = scene.add.triangle(
+      0, -2,
+      0, -7,
+      -5, 4,
+      5, 4,
+      0xff8990
+    );
+
+    const spike3 = scene.add.triangle(
+      8, -2,
+      0, -7,
+      -5, 4,
+      5, 4,
+      0xe65b65
+    );
+
+    this.sprite = scene.add.container(
+      position.x,
+      position.y,
+      [glow, plate, spike1, spike2, spike3]
+    );
 
     this.sprite.setDepth(
-      getIsometricDepth(x, y, 4)
+      getEntityDepth(x, y, 3)
     );
   }
 

@@ -41,3 +41,13 @@ export function getIsometricDepth(
 ) {
   return (tileX + tileY) * 10 + layer;
 }
+
+
+export function getEntityDepth(
+  tileX: number,
+  tileY: number,
+  layer = 0
+) {
+  return 1000 + (tileX + tileY) * 10 + layer;
+}
+

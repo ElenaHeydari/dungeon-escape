@@ -2,7 +2,7 @@
 import Phaser from "phaser";
 import {
   tileToWorld,
-  getIsometricDepth,
+  getEntityDepth,
 } from "../maps/isometric";
 
 export class Player {
@@ -33,6 +33,10 @@ export class Player {
       offsetY
     );
 
+    const glow = scene.add.circle(
+      0, 0, 19, 0x45d6c5, 0.18
+    );
+
     const shadow = scene.add.ellipse(
       0, 7, 23, 10, 0x000000, 0.4
     );
@@ -60,12 +64,12 @@ export class Player {
     this.sprite = scene.add.container(
       position.x,
       position.y,
-      [shadow, cape, body, head, visor]
+      [shadow, glow, cape, body, head, visor]
     );
 
     this.sprite.setDepth(
-      getIsometricDepth(tileX, tileY, 6)
-    );
+    getEntityDepth(tileX, tileY, 10)
+  );
   }
 
   get x(): number {
@@ -97,7 +101,7 @@ export class Player {
     );
 
     this.sprite.setDepth(
-      getIsometricDepth(targetX, targetY, 6)
+      getEntityDepth(targetX, targetY, 10)
     );
 
     this.scene.tweens.add({
