@@ -1,6 +1,9 @@
 
 import Phaser from "phaser";
-import { TILE_SIZE } from "../maps/level01";
+import {
+  tileToWorld,
+  getIsometricDepth,
+} from "../maps/isometric";
 
 export type CollectibleType = "key" | "treasure" | "potion";
 
@@ -24,14 +27,23 @@ export class Collectible {
 
     const color = colors[type];
 
+    const position = tileToWorld(
+      tileX,
+      tileY,
+      offsetX,
+      offsetY
+    );
+
     this.sprite = scene.add.circle(
-      offsetX + tileX * TILE_SIZE + TILE_SIZE / 2,
-      offsetY + tileY * TILE_SIZE + TILE_SIZE / 2,
-      TILE_SIZE * 0.25,
+      position.x,
+      position.y,
+      7,
       color
     );
 
-    this.sprite.setDepth(5);
+    this.sprite.setDepth(
+      getIsometricDepth(tileX, tileY, 4)
+    );
   }
 
   collect(): boolean {

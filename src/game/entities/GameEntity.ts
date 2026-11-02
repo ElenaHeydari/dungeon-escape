@@ -1,6 +1,9 @@
 
 import Phaser from "phaser";
-import { TILE_SIZE } from "../maps/level01";
+import {
+  tileToWorld,
+  getIsometricDepth,
+} from "../maps/isometric";
 
 export abstract class GameEntity {
   protected sprite: Phaser.GameObjects.Rectangle;
@@ -17,17 +20,28 @@ export abstract class GameEntity {
     offsetX: number,
     offsetY: number,
     color: number,
-    size = 0.65
+    
   ) {
     this.tileX = x;
     this.tileY = y;
 
+    const position = tileToWorld(
+      x,
+      y,
+      offsetX,
+      offsetY
+    );
+
     this.sprite = scene.add.rectangle(
-      offsetX + x * TILE_SIZE + TILE_SIZE / 2,
-      offsetY + y * TILE_SIZE + TILE_SIZE / 2,
-      TILE_SIZE * size,
-      TILE_SIZE * size,
+      position.x,
+      position.y,
+      22,
+      22,
       color
+    );
+
+    this.sprite.setDepth(
+      getIsometricDepth(x, y, 6)
     );
 
     this.sprite.setDepth(8);
@@ -56,10 +70,21 @@ export abstract class GameEntity {
 
     this.moving = true;
 
+    const target = tileToWorld(
+      x,
+      y,
+      offsetX,
+      offsetY
+    );
+
+    this.sprite.setDepth(
+      getIsometricDepth(x, y, 6)
+    );
+
     this.scene.tweens.add({
       targets: this.sprite,
-      x: offsetX + x * TILE_SIZE + TILE_SIZE / 2,
-      y: offsetY + y * TILE_SIZE + TILE_SIZE / 2,
+      x: target.x,
+      y: target.y,
       duration,
       ease: "Linear",
       onComplete: () => {

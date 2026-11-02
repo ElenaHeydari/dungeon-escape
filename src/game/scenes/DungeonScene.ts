@@ -2,10 +2,15 @@
 
 import Phaser from "phaser";
 
+import { TileType } from "../maps/level01";
+
 import {
-  TILE_SIZE,
-  TileType
-} from "../maps/level01";
+  ISO_TILE_WIDTH,
+  ISO_TILE_HEIGHT,
+  getIsometricMapOffset,
+  getIsometricDepth,
+  tileToWorld,
+} from "../maps/isometric";
 
 import { LevelManager } from "../systems/LevelManager";
 import type { LevelData } from "../data/levels";
@@ -209,33 +214,112 @@ export class DungeonScene extends Phaser.Scene {
   // ---------------- MAP ----------------
 
 
+
   private drawMap(): void {
-    
     const map = this.currentLevel.map;
 
-    const mapWidth = map[0].length * TILE_SIZE;
-    const mapHeight = map.length * TILE_SIZE;
+    const offset = getIsometricMapOffset(map);
 
-    this.offsetX = (800 - mapWidth) / 2;
-    this.offsetY = (600 - mapHeight) / 2;
+    this.offsetX = offset.x;
+    this.offsetY = offset.y;
+
+    const tiles: {
+      x: number;
+      y: number;
+      type: TileType;
+    }[] = [];
 
     map.forEach((row, y) => {
-      row.forEach((tile, x) => {
-        let color = 0x17232d;
-
-        if (tile === TileType.WALL) color = 0x263746;
-        if (tile === TileType.EXIT) color = 0x45d6c5;
-
-        this.add.rectangle(
-          this.offsetX + x * TILE_SIZE + TILE_SIZE / 2,
-          this.offsetY + y * TILE_SIZE + TILE_SIZE / 2,
-          TILE_SIZE - 2,
-          TILE_SIZE - 2,
-          color
-        );
+      row.forEach((type, x) => {
+        tiles.push({ x, y, type });
       });
     });
+
+    // Draw tiles from back to front
+    tiles.sort((a, b) => {
+      return (
+        a.x + a.y - (b.x + b.y) ||
+        a.x - b.x
+      );
+    });
+
+    tiles.forEach(({ x, y, type }) => {
+      const position = tileToWorld(
+        x,
+        y,
+        this.offsetX,
+        this.offsetY
+      );
+
+      const depth = getIsometricDepth(x, y);
+
+      const points = [
+        0, -ISO_TILE_HEIGHT / 2,
+        ISO_TILE_WIDTH / 2, 0,
+        0, ISO_TILE_HEIGHT / 2,
+        -ISO_TILE_WIDTH / 2, 0,
+      ];
+
+      if (type === TileType.WALL) {
+        // Left wall face
+        this.add.polygon(
+          position.x,
+          position.y - 3,
+          [
+            -24, -12,
+            0, 0,
+            0, 18,
+            -24, 6,
+          ],
+          0x1d2b36
+        ).setDepth(depth + 1);
+
+        // Right wall face
+        this.add.polygon(
+          position.x,
+          position.y - 3,
+          [
+            24, -12,
+            0, 0,
+            0, 18,
+            24, 6,
+          ],
+          0x263746
+        ).setDepth(depth + 1);
+
+        // Wall top
+        this.add.polygon(
+          position.x,
+          position.y - 18,
+          points,
+          0x344958
+        )
+          .setStrokeStyle(1, 0x526778, 0.8)
+          .setDepth(depth + 2);
+
+        return;
+      }
+
+      const color =
+        type === TileType.EXIT
+          ? 0x245b58
+          : 0x17232d;
+
+      this.add.polygon(
+        position.x,
+        position.y,
+        points,
+        color
+      )
+        .setStrokeStyle(
+          1,
+          type === TileType.EXIT ? 0x45d6c5 : 0x304553,
+          0.9
+        )
+        .setDepth(depth);
+    });
   }
+
 
 
   private isWalkable(x: number, y: number): boolean {

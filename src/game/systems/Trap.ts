@@ -1,6 +1,9 @@
 
 import Phaser from "phaser";
-import { TILE_SIZE } from "../maps/level01";
+import {
+  tileToWorld,
+  getIsometricDepth,
+} from "../maps/isometric";
 
 export class Trap {
   private sprite: Phaser.GameObjects.Rectangle;
@@ -12,12 +15,24 @@ export class Trap {
     offsetX: number,
     offsetY: number
   ) {
+    const position = tileToWorld(
+      x,
+      y,
+      offsetX,
+      offsetY
+    );
+
     this.sprite = scene.add.rectangle(
-      offsetX + x * TILE_SIZE + TILE_SIZE / 2,
-      offsetY + y * TILE_SIZE + TILE_SIZE / 2,
-      TILE_SIZE * 0.7,
-      TILE_SIZE * 0.7,
+      position.x,
+      position.y,
+      24,
+      14,
       0xe65b65
+    );
+
+    this.sprite.setAlpha(0.7);
+    this.sprite.setDepth(
+      getIsometricDepth(x, y, 3)
     );
 
     this.sprite.setAlpha(0.7);

@@ -1,6 +1,9 @@
 
 import Phaser from "phaser";
-import { TILE_SIZE } from "../maps/level01";
+import {
+  tileToWorld,
+  getIsometricDepth,
+} from "../maps/isometric";
 
 export class Player {
   private sprite: Phaser.GameObjects.Rectangle;
@@ -23,14 +26,24 @@ export class Player {
     this.offsetX = offsetX;
     this.offsetY = offsetY;
 
+    const position = tileToWorld(
+      tileX,
+      tileY,
+      offsetX,
+      offsetY
+    );
+
     this.sprite = scene.add.rectangle(
-      this.getWorldX(tileX),
-      this.getWorldY(tileY),
-      TILE_SIZE * 0.58,
-      TILE_SIZE * 0.58,
+      position.x,
+      position.y,
+      22,
+      22,
       0x45d6c5
     );
 
+    this.sprite.setDepth(
+      getIsometricDepth(tileX, tileY, 5)
+    );
     this.sprite.setDepth(10);
   }
 
@@ -54,11 +67,17 @@ export class Player {
     if (this.moving) return;
 
     this.moving = true;
+    const target = tileToWorld(
+      targetX,
+      targetY,
+      this.offsetX,
+      this.offsetY
+    );
 
     this.scene.tweens.add({
       targets: this.sprite,
-      x: this.getWorldX(targetX),
-      y: this.getWorldY(targetY),
+      x: target.x,
+      y: target.y,
       duration: 120,
       ease: "Linear",
       onComplete: () => {
@@ -68,17 +87,16 @@ export class Player {
         onComplete?.();
       }
     });
+
+    this.sprite.setDepth(
+      getIsometricDepth(targetX, targetY, 5)
+    );
   }
+
 
   destroy(): void {
     this.sprite.destroy();
   }
 
-  private getWorldX(tileX: number): number {
-    return this.offsetX + tileX * TILE_SIZE + TILE_SIZE / 2;
-  }
 
-  private getWorldY(tileY: number): number {
-    return this.offsetY + tileY * TILE_SIZE + TILE_SIZE / 2;
-  }
 }
