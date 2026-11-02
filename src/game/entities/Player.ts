@@ -6,7 +6,7 @@ import {
 } from "../maps/isometric";
 
 export class Player {
-  private sprite: Phaser.GameObjects.Rectangle;
+  private sprite: Phaser.GameObjects.Container;
   private moving = false;
 
   private tileX: number;
@@ -33,18 +33,39 @@ export class Player {
       offsetY
     );
 
-    this.sprite = scene.add.rectangle(
+    const shadow = scene.add.ellipse(
+      0, 7, 23, 10, 0x000000, 0.4
+    );
+
+    const cape = scene.add.triangle(
+      0, 1,
+      0, -11,
+      -10, 9,
+      10, 9,
+      0x176d70
+    );
+
+    const body = scene.add.ellipse(
+      0, 1, 13, 18, 0x45d6c5
+    );
+
+    const head = scene.add.circle(
+      0, -8, 5.5, 0xe8eef2
+    );
+
+    const visor = scene.add.rectangle(
+      0, -8, 8, 2, 0x17232d
+    );
+
+    this.sprite = scene.add.container(
       position.x,
       position.y,
-      22,
-      22,
-      0x45d6c5
+      [shadow, cape, body, head, visor]
     );
 
     this.sprite.setDepth(
-      getIsometricDepth(tileX, tileY, 5)
+      getIsometricDepth(tileX, tileY, 6)
     );
-    this.sprite.setDepth(10);
   }
 
   get x(): number {
@@ -67,11 +88,16 @@ export class Player {
     if (this.moving) return;
 
     this.moving = true;
+
     const target = tileToWorld(
       targetX,
       targetY,
       this.offsetX,
       this.offsetY
+    );
+
+    this.sprite.setDepth(
+      getIsometricDepth(targetX, targetY, 6)
     );
 
     this.scene.tweens.add({
@@ -87,16 +113,10 @@ export class Player {
         onComplete?.();
       }
     });
-
-    this.sprite.setDepth(
-      getIsometricDepth(targetX, targetY, 5)
-    );
   }
-
 
   destroy(): void {
     this.sprite.destroy();
   }
-
-
 }
+

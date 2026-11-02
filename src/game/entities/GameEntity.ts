@@ -20,7 +20,6 @@ export abstract class GameEntity {
     offsetX: number,
     offsetY: number,
     color: number,
-    
   ) {
     this.tileX = x;
     this.tileY = y;
@@ -43,8 +42,6 @@ export abstract class GameEntity {
     this.sprite.setDepth(
       getIsometricDepth(x, y, 6)
     );
-
-    this.sprite.setDepth(8);
   }
 
   get x(): number {

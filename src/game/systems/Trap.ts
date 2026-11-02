@@ -30,16 +30,15 @@ export class Trap {
       0xe65b65
     );
 
-    this.sprite.setAlpha(0.7);
-    this.sprite.setDepth(
-      getIsometricDepth(x, y, 3)
-    );
+    this.sprite.setAlpha(0.85);
 
-    this.sprite.setAlpha(0.7);
-    this.sprite.setDepth(4);
+    this.sprite.setDepth(
+      getIsometricDepth(x, y, 4)
+    );
   }
 
   destroy(): void {
     this.sprite.destroy();
   }
 }
+

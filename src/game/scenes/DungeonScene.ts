@@ -215,9 +215,9 @@ export class DungeonScene extends Phaser.Scene {
 
 
 
+
   private drawMap(): void {
     const map = this.currentLevel.map;
-
     const offset = getIsometricMapOffset(map);
 
     this.offsetX = offset.x;
@@ -235,13 +235,10 @@ export class DungeonScene extends Phaser.Scene {
       });
     });
 
-    // Draw tiles from back to front
-    tiles.sort((a, b) => {
-      return (
-        a.x + a.y - (b.x + b.y) ||
-        a.x - b.x
-      );
-    });
+    tiles.sort((a, b) =>
+      (a.x + a.y) - (b.x + b.y) ||
+      a.x - b.x
+    );
 
     tiles.forEach(({ x, y, type }) => {
       const position = tileToWorld(
@@ -261,64 +258,68 @@ export class DungeonScene extends Phaser.Scene {
       ];
 
       if (type === TileType.WALL) {
-        // Left wall face
+        // Left face: lower wall height
         this.add.polygon(
           position.x,
           position.y - 3,
           [
             -24, -12,
             0, 0,
-            0, 18,
-            -24, 6,
+            0, 8,
+            -24, -4,
           ],
-          0x1d2b36
+          0x263946
         ).setDepth(depth + 1);
 
-        // Right wall face
+        // Right face
         this.add.polygon(
           position.x,
           position.y - 3,
           [
             24, -12,
             0, 0,
-            0, 18,
-            24, 6,
+            0, 8,
+            24, -4,
           ],
-          0x263746
+          0x304653
         ).setDepth(depth + 1);
 
         // Wall top
         this.add.polygon(
           position.x,
-          position.y - 18,
+          position.y - 8,
           points,
-          0x344958
+          0x405968
         )
-          .setStrokeStyle(1, 0x526778, 0.8)
+          .setStrokeStyle(1, 0x607987, 0.9)
           .setDepth(depth + 2);
 
         return;
       }
 
-      const color =
-        type === TileType.EXIT
-          ? 0x245b58
-          : 0x17232d;
+      const isExit = type === TileType.EXIT;
+
+      const floorColor = isExit
+        ? 0x245b58
+        : (x + y) % 2 === 0
+          ? 0x223641
+          : 0x1d303b;
 
       this.add.polygon(
         position.x,
         position.y,
         points,
-        color
+        floorColor
       )
         .setStrokeStyle(
           1,
-          type === TileType.EXIT ? 0x45d6c5 : 0x304553,
-          0.9
+          isExit ? 0x45d6c5 : 0x3b5665,
+          0.85
         )
         .setDepth(depth);
     });
   }
+
 
 
 
