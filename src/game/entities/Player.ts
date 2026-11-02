@@ -33,8 +33,12 @@ export class Player {
       offsetY
     );
 
-    const glow = scene.add.circle(
-      0, 0, 19, 0x45d6c5, 0.18
+    const outerGlow = scene.add.circle(
+      0, 0, 27, 0x45d6c5, 0.055
+    );
+
+    const innerGlow = scene.add.circle(
+      0, 0, 16, 0x45d6c5, 0.14
     );
 
     const shadow = scene.add.ellipse(
@@ -64,7 +68,7 @@ export class Player {
     this.sprite = scene.add.container(
       position.x,
       position.y,
-      [shadow, glow, cape, body, head, visor]
+      [shadow, outerGlow,innerGlow, cape, body, head, visor]
     );
 
     this.sprite.setDepth(

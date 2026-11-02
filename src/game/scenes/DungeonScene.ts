@@ -5,8 +5,6 @@ import Phaser from "phaser";
 import { TileType } from "../maps/level01";
 
 import {
-  ISO_TILE_WIDTH,
-  ISO_TILE_HEIGHT,
   getIsometricMapOffset,
   getIsometricDepth,
   tileToWorld,
@@ -216,6 +214,7 @@ export class DungeonScene extends Phaser.Scene {
 
 
 
+
   private drawMap(): void {
     const map = this.currentLevel.map;
     const offset = getIsometricMapOffset(map);
@@ -240,6 +239,20 @@ export class DungeonScene extends Phaser.Scene {
       a.x - b.x
     );
 
+    const diamond = [
+      0, -12,
+      24, 0,
+      0, 12,
+      -24, 0,
+    ];
+
+    const insetDiamond = [
+      0, -9,
+      18, 0,
+      0, 9,
+      -18, 0,
+    ];
+
     tiles.forEach(({ x, y, type }) => {
       const position = tileToWorld(
         x,
@@ -250,75 +263,147 @@ export class DungeonScene extends Phaser.Scene {
 
       const depth = getIsometricDepth(x, y);
 
-      const points = [
-        0, -ISO_TILE_HEIGHT / 2,
-        ISO_TILE_WIDTH / 2, 0,
-        0, ISO_TILE_HEIGHT / 2,
-        -ISO_TILE_WIDTH / 2, 0,
-      ];
-
       if (type === TileType.WALL) {
-        // Left face: lower wall height
+        // Left wall face
         this.add.polygon(
           position.x,
-          position.y - 3,
+          position.y - 2,
           [
             -24, -12,
             0, 0,
-            0, 8,
-            -24, -4,
+            0, 6,
+            -24, -6,
           ],
-          0x263946
+          0x263642
         ).setDepth(depth + 1);
 
-        // Right face
+        // Right wall face
         this.add.polygon(
           position.x,
-          position.y - 3,
+          position.y - 2,
           [
             24, -12,
             0, 0,
-            0, 8,
-            24, -4,
+            0, 6,
+            24, -6,
           ],
-          0x304653
+          0x344957
         ).setDepth(depth + 1);
 
-        // Wall top
+        // Stone top
         this.add.polygon(
           position.x,
-          position.y - 8,
-          points,
-          0x405968
+          position.y - 6,
+          diamond,
+          0x405866
         )
-          .setStrokeStyle(1, 0x607987, 0.9)
+          .setStrokeStyle(1, 0x627b88, 0.75)
           .setDepth(depth + 2);
+
+        // Top surface highlight
+        this.add.line(
+          position.x,
+          position.y - 6,
+          -13, 0,
+          0, -6,
+          0x8195a0,
+          0.22
+        ).setDepth(depth + 3);
 
         return;
       }
 
       const isExit = type === TileType.EXIT;
 
+      const variation = (x * 7 + y * 13) % 4;
+
+      const floorColors = [
+        0x263b46,
+        0x293f4a,
+        0x223641,
+        0x2b414b,
+      ];
+
       const floorColor = isExit
         ? 0x245b58
-        : (x + y) % 2 === 0
-          ? 0x223641
-          : 0x1d303b;
+        : floorColors[variation];
 
+      // Main stone tile
       this.add.polygon(
         position.x,
         position.y,
-        points,
+        diamond,
         floorColor
       )
         .setStrokeStyle(
           1,
-          isExit ? 0x45d6c5 : 0x3b5665,
-          0.85
+          isExit ? 0x45d6c5 : 0x344e5b,
+          0.5
         )
         .setDepth(depth);
+
+      // Inner stone surface
+      this.add.polygon(
+        position.x,
+        position.y - 0.5,
+        insetDiamond,
+        isExit ? 0x286b64 : 0x2b424d,
+        0.22
+      ).setDepth(depth + 0.1);
+
+      // Small decorative stone marks
+      if (!isExit && (x * 3 + y * 5) % 5 === 0) {
+        this.add.line(
+          position.x - 5,
+          position.y - 2,
+          -3, 0,
+          4, 2,
+          0x8da0a9,
+          0.18
+        ).setDepth(depth + 0.2);
+      }
+
+      // Exit lighting
+      if (isExit) {
+        this.add.ellipse(
+          position.x,
+          position.y,
+          34,
+          18,
+          0x45d6c5,
+          0.12
+        ).setDepth(depth + 0.3);
+
+        this.add.polygon(
+          position.x,
+          position.y - 1,
+          insetDiamond,
+          0x45d6c5,
+          0.28
+        ).setDepth(depth + 0.4);
+      }
     });
+
+    // Ambient light near player spawn
+    const spawn = this.currentLevel.playerSpawn;
+
+    const spawnPosition = tileToWorld(
+      spawn.x,
+      spawn.y,
+      this.offsetX,
+      this.offsetY
+    );
+
+    this.add.ellipse(
+      spawnPosition.x,
+      spawnPosition.y,
+      72,
+      38,
+      0x45d6c5,
+      0.035
+    ).setDepth(900);
   }
+
 
 
 
