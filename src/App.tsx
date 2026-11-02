@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { GameCanvas, type MoveInput } from "./components/GameCanvas";
 import "./styles/global.css";
 
@@ -9,6 +9,13 @@ const directions: { label: string; key: keyof MoveInput; className: string }[] =
   { label: "→", key: "right", className: "right" },
 ];
 
+const keyMap: Record<string, keyof MoveInput> = {
+  w: "forward", arrowup: "forward",
+  s: "backward", arrowdown: "backward",
+  a: "left", arrowleft: "left",
+  d: "right", arrowright: "right",
+};
+
 function App() {
   const moveInput = useRef<MoveInput>({
     forward: false,
@@ -16,6 +23,31 @@ function App() {
     left: false,
     right: false,
   });
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const direction = keyMap[event.key.toLowerCase()];
+      if (!direction) return;
+      event.preventDefault();
+      moveInput.current[direction] = true;
+    };
+    const onKeyUp = (event: KeyboardEvent) => {
+      const direction = keyMap[event.key.toLowerCase()];
+      if (direction) moveInput.current[direction] = false;
+    };
+    const clearKeys = () => {
+      moveInput.current = { forward: false, backward: false, left: false, right: false };
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
+    window.addEventListener("blur", clearKeys);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+      window.removeEventListener("blur", clearKeys);
+    };
+  }, []);
 
   const setDirection = (key: keyof MoveInput, pressed: boolean) => {
     moveInput.current[key] = pressed;
