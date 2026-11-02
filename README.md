@@ -119,21 +119,10 @@ Dungeon Escape can be installed as a PWA on supported browsers. Once the applica
 
 ## Deployment
 
-The project is configured for deployment to **GitHub Pages** under the repository path:
-
 ```text
-/dungeon-escape/
+https://ElenaHeydari.github.io/dungeon-escape/
 ```
 
-After deployment, the game will be available at:
-
-```text
-https://<YOUR_GITHUB_USERNAME>.github.io/dungeon-escape/
-```
-
-## Development Status
-
-Dungeon Escape is an ongoing portfolio project. New levels, gameplay improvements, and additional features may be added over time.
 
 ## License
 
