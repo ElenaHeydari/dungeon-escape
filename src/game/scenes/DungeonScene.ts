@@ -3,11 +3,12 @@
 import Phaser from "phaser";
 
 import {
-  LEVEL_01_MAP,
   TILE_SIZE,
   TileType
 } from "../maps/level01";
 
+import { LevelManager } from "../systems/LevelManager";
+import type { LevelData } from "../data/levels";
 import { Player } from "../entities/Player";
 import { Collectible } from "../entities/Collectible";
 import { Enemy } from "../entities/enemies/Enemy";
@@ -20,6 +21,11 @@ import { HealthSystem } from "../systems/HealthSystem";
 import { Trap } from "../systems/Trap";
 
 export class DungeonScene extends Phaser.Scene {
+
+  private levelManager!: LevelManager;
+  private currentLevel!: LevelData;
+  private nextLevelKey!: Phaser.Input.Keyboard.Key;
+  private levelWon = false;
   private player!: Player;
 
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
@@ -58,20 +64,28 @@ export class DungeonScene extends Phaser.Scene {
 
   private isPaused = false;
   private pauseOverlay?: Phaser.GameObjects.Container;
+  
 
   constructor() {
     super("DungeonScene");
   }
 
-  create(): void {
+
+  create(data?: { levelId?: number }): void {
+    const levelId = data?.levelId ?? 1;
+    this.levelWon = false;
+    this.levelManager = new LevelManager(levelId);
+    this.currentLevel = this.levelManager.currentLevel;
+
     this.completed = false;
+    this.isPaused = false;
     this.hasKey = false;
     this.score = 0;
-    
+
     this.collectibles = [];
     this.enemies = [];
     this.traps = [];
-    
+
     this.inventory = new Inventory();
     this.health = new HealthSystem(3, 1000);
 
@@ -83,28 +97,54 @@ export class DungeonScene extends Phaser.Scene {
     this.createEnemies();
     this.createTraps();
     this.createHUD();
-    void this.loadSavedProgress();
     this.setupControls();
+
+    void this.loadSavedProgress();
 
     this.events.once("shutdown", () => {
       this.health.destroy();
-
       this.player.destroy();
 
       this.collectibles.forEach(item => item.destroy());
       this.enemies.forEach(enemy => enemy.destroy());
       this.traps.forEach(trap => trap.destroy());
+
+      this.pauseOverlay?.destroy();
+
+      this.input.keyboard?.off(
+        "keydown-H",
+      );
     });
   }
+
 
   
   update(_time: number, delta: number): void {
     if (this.completed) {
       if (Phaser.Input.Keyboard.JustDown(this.restartKey)) {
-        this.scene.restart();
+        this.scene.restart({
+          levelId: this.currentLevel.id
+        });
       }
-      return;
-    }
+
+      if (
+        this.levelWon &&
+        Phaser.Input.Keyboard.JustDown(this.nextLevelKey) &&
+        this.levelManager.hasNextLevel
+      ) {
+        const nextLevelId = this.currentLevel.id + 1;
+
+        this.scene.restart({
+          levelId: nextLevelId
+        });
+
+        return;
+      
+        }
+      }
+    
+    
+
 
     if (this.isPaused) {
       if (Phaser.Input.Keyboard.JustDown(this.restartKey)) {
@@ -155,14 +195,18 @@ export class DungeonScene extends Phaser.Scene {
 
   // ---------------- MAP ----------------
 
+
   private drawMap(): void {
-    const mapWidth = LEVEL_01_MAP[0].length * TILE_SIZE;
-    const mapHeight = LEVEL_01_MAP.length * TILE_SIZE;
+    
+    const map = this.currentLevel.map;
+
+    const mapWidth = map[0].length * TILE_SIZE;
+    const mapHeight = map.length * TILE_SIZE;
 
     this.offsetX = (800 - mapWidth) / 2;
     this.offsetY = (600 - mapHeight) / 2;
 
-    LEVEL_01_MAP.forEach((row, y) => {
+    map.forEach((row, y) => {
       row.forEach((tile, x) => {
         let color = 0x17232d;
 
@@ -180,26 +224,31 @@ export class DungeonScene extends Phaser.Scene {
     });
   }
 
+
   private isWalkable(x: number, y: number): boolean {
+    const map = this.currentLevel.map;
+
     if (
       y < 0 ||
-      y >= LEVEL_01_MAP.length ||
+      y >= map.length ||
       x < 0 ||
-      x >= LEVEL_01_MAP[y].length
+      x >= map[y].length
     ) {
       return false;
     }
 
-    return LEVEL_01_MAP[y][x] !== TileType.WALL;
+    return map[y][x] !== TileType.WALL;
   }
 
   // ---------------- PLAYER ----------------
 
   private createPlayer(): void {
+    const spawn = this.currentLevel.playerSpawn;
+
     this.player = new Player(
       this,
-      1,
-      1,
+      spawn.x,
+      spawn.y,
       this.offsetX,
       this.offsetY
     );
@@ -245,17 +294,16 @@ export class DungeonScene extends Phaser.Scene {
   // ---------------- COLLECTIBLES ----------------
 
   private createCollectibles(): void {
-    this.collectibles = [
-      new Collectible(
-        this, "key", 4, 3, this.offsetX, this.offsetY
-      ),
-      new Collectible(
-        this, "treasure", 10, 5, this.offsetX, this.offsetY
-      ),
-      new Collectible(
-        this, "potion", 2, 5, this.offsetX, this.offsetY
-      )
-    ];
+    this.collectibles = this.currentLevel.items.map(item => {
+      return new Collectible(
+        this,
+        item.type,
+        item.x,
+        item.y,
+        this.offsetX,
+        this.offsetY
+      );
+    });
   }
 
 
@@ -300,14 +348,25 @@ export class DungeonScene extends Phaser.Scene {
   // ---------------- ENEMIES ----------------
 
   private createEnemies(): void {
-    this.enemies = [
-      new SlimeEnemy(
-        this, 8, 3, this.offsetX, this.offsetY
-      ),
-      new SkeletonEnemy(
-        this, 8, 7, this.offsetX, this.offsetY
-      )
-    ];
+    this.enemies = this.currentLevel.enemies.map(enemy => {
+      if (enemy.type === "slime") {
+        return new SlimeEnemy(
+          this,
+          enemy.x,
+          enemy.y,
+          this.offsetX,
+          this.offsetY
+        );
+      }
+
+      return new SkeletonEnemy(
+        this,
+        enemy.x,
+        enemy.y,
+        this.offsetX,
+        this.offsetY
+      );
+    });
   }
 
   private updateEnemies(delta: number): void {
@@ -361,10 +420,15 @@ export class DungeonScene extends Phaser.Scene {
   // ---------------- TRAPS ----------------
 
   private createTraps(): void {
-    this.traps = [
-      new Trap(this, 6, 5, this.offsetX, this.offsetY),
-      new Trap(this, 2, 7, this.offsetX, this.offsetY)
-    ];
+    this.traps = this.currentLevel.traps.map(trap => {
+      return new Trap(
+        this,
+        trap.x,
+        trap.y,
+        this.offsetX,
+        this.offsetY
+      );
+    });
   }
 
   private checkTrapCollisions(): void {
@@ -415,9 +479,11 @@ export class DungeonScene extends Phaser.Scene {
   // ---------------- EXIT ----------------
 
   private findExit(): { x: number; y: number } | null {
-    for (let y = 0; y < LEVEL_01_MAP.length; y++) {
-      for (let x = 0; x < LEVEL_01_MAP[y].length; x++) {
-        if (LEVEL_01_MAP[y][x] === TileType.EXIT) {
+    const map = this.currentLevel.map;
+
+    for (let y = 0; y < map.length; y++) {
+      for (let x = 0; x < map[y].length; x++) {
+        if (map[y][x] === TileType.EXIT) {
           return { x, y };
         }
       }
@@ -449,42 +515,59 @@ export class DungeonScene extends Phaser.Scene {
   }
 
   
+
   private completeLevel(): void {
+    this.levelWon = true;
     this.completed = true;
     this.score += 500;
 
     this.updateHUD();
 
+    const hasNext = this.levelManager.hasNextLevel;
+
+    const message = hasNext
+      ? `LEVEL ${this.currentLevel.id} COMPLETE!\nScore: ${this.score}\nPress N for Next Level | R to Replay`
+      : `ALL LEVELS COMPLETE!\nFinal Score: ${this.score}\nPress R to Replay`;
+
     this.messageText.setColor("#45d6c5");
-    this.messageText.setText(
-      `LEVEL COMPLETE! Final score: ${this.score} | Press R to restart`
-    );
+    this.messageText.setText(message);
 
     void this.saveProgress();
   }
+
+
 
   private async saveProgress(): Promise<void> {
     try {
       const previousSave = await SaveManager.load();
 
+      const nextLevel = this.currentLevel.id + 1;
+
       const save = {
         bestScore: Math.max(previousSave.bestScore, this.score),
-        unlockedLevel: Math.max(previousSave.unlockedLevel, 2),
+
+        unlockedLevel: Math.max(
+          previousSave.unlockedLevel,
+          Math.min(nextLevel, this.levelManager.totalLevels)
+        ),
+
         completedLevels: Array.from(
-          new Set([...previousSave.completedLevels, 1])
+          new Set([
+            ...previousSave.completedLevels,
+            this.currentLevel.id
+          ])
         )
       };
 
       await SaveManager.save(save);
 
-      this.showMessage(
-        `Level completed! Best score: ${save.bestScore}`
-      );
+      console.info("Progress saved:", save);
     } catch (error) {
-      console.error("Could not save game progress:", error);
+      console.error("Could not save progress:", error);
       this.showMessage("Warning: Progress could not be saved.");
     }
   }
+
 
   
   private async loadSavedProgress(): Promise<void> {
@@ -508,12 +591,13 @@ export class DungeonScene extends Phaser.Scene {
   private createHUD(): void {
     this.hudText = this.add.text(
       20,
-      18,
+      15,
       "",
       {
         fontFamily: "Arial",
-        fontSize: "16px",
-        color: "#e8eef2"
+        fontSize: "14px",
+        color: "#e8eef2",
+        lineSpacing: 5
       }
     );
 
@@ -544,6 +628,7 @@ export class DungeonScene extends Phaser.Scene {
       "♡".repeat(this.health.max - this.health.health);
 
     this.hudText.setText(
+      `Level: ${this.currentLevel.id} - ${this.currentLevel.name}\n` +
       `Health: ${hearts}     Score: ${this.score}     ` +
       `Key: ${this.hasKey ? "YES" : "NO"}     ` +
       `Potions: ${this.inventory.getCount("potion")}`
@@ -665,6 +750,10 @@ export class DungeonScene extends Phaser.Scene {
 
     this.pauseKey = this.input.keyboard.addKey(
       Phaser.Input.Keyboard.KeyCodes.ESC
+    );
+
+    this.nextLevelKey = this.input.keyboard.addKey(
+      Phaser.Input.Keyboard.KeyCodes.N
     );
   }
 }
