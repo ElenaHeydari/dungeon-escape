@@ -1,9 +1,14 @@
+
 import { useEffect, useRef } from "react";
 import Phaser from "phaser";
 
 import { GAME_CONFIG } from "../game/core/GameConfig";
 
-export function GameCanvas() {
+type GameCanvasProps = {
+  onGameReady: (game: Phaser.Game | null) => void;
+};
+
+export function GameCanvas({ onGameReady }: GameCanvasProps) {
   const gameRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -14,10 +19,13 @@ export function GameCanvas() {
       parent: gameRef.current,
     });
 
+    onGameReady(game);
+
     return () => {
+      onGameReady(null);
       game.destroy(true);
     };
-  }, []);
+  }, [onGameReady]);
 
   return (
     <div

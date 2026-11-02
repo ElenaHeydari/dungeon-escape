@@ -65,6 +65,8 @@ export class DungeonScene extends Phaser.Scene {
   private isPaused = false;
   private pauseOverlay?: Phaser.GameObjects.Container;
   
+  private touchDirection: { x: number; y: number } | null = null;
+  private touchMoveBlocked = false;
 
   constructor() {
     super("DungeonScene");
@@ -74,6 +76,8 @@ export class DungeonScene extends Phaser.Scene {
   create(data?: { levelId?: number }): void {
     const levelId = data?.levelId ?? 1;
     this.levelWon = false;
+    this.touchDirection = null;
+    this.touchMoveBlocked = false;
     this.levelManager = new LevelManager(levelId);
     this.currentLevel = this.levelManager.currentLevel;
 
@@ -119,12 +123,15 @@ export class DungeonScene extends Phaser.Scene {
 
 
   
+  
   update(_time: number, delta: number): void {
+    // Handle completed state
     if (this.completed) {
       if (Phaser.Input.Keyboard.JustDown(this.restartKey)) {
         this.scene.restart({
           levelId: this.currentLevel.id
         });
+        return;
       }
 
       if (
@@ -139,16 +146,18 @@ export class DungeonScene extends Phaser.Scene {
         });
 
         return;
-      
-        }
       }
-    
-    
 
+      // CRITICAL: Stop all gameplay after completion.
+      return;
+    }
 
+    // Handle paused state
     if (this.isPaused) {
       if (Phaser.Input.Keyboard.JustDown(this.restartKey)) {
-        this.scene.restart();
+        this.scene.restart({
+          levelId: this.currentLevel.id
+        });
         return;
       }
 
@@ -159,22 +168,27 @@ export class DungeonScene extends Phaser.Scene {
       return;
     }
 
+    // Pause game
     if (Phaser.Input.Keyboard.JustDown(this.pauseKey)) {
       this.pauseGame();
       return;
     }
 
+    // Update enemies and collisions
     this.updateEnemies(delta);
     this.checkEnemyCollisions();
     this.checkTrapCollisions();
 
+    // Check player death
     if (this.health.isDead) {
       this.handleGameOver();
       return;
     }
 
+    // Wait until player movement finishes
     if (this.player.isMoving) return;
 
+    // Player controls
     this.handleMovement();
 
     if (Phaser.Input.Keyboard.JustDown(this.attackKey)) {
@@ -188,9 +202,8 @@ export class DungeonScene extends Phaser.Scene {
     if (Phaser.Input.Keyboard.JustDown(this.potionKey)) {
       this.usePotion();
     }
-
-
   }
+
 
 
   // ---------------- MAP ----------------
@@ -254,7 +267,18 @@ export class DungeonScene extends Phaser.Scene {
     );
   }
 
+  
   private handleMovement(): void {
+    // Touch movement has priority while a direction is held.
+    if (this.touchDirection && !this.touchMoveBlocked) {
+      this.touchMoveBlocked = true;
+      this.tryMove(
+        this.touchDirection.x,
+        this.touchDirection.y
+      );
+      return;
+    }
+
     if (
       Phaser.Input.Keyboard.JustDown(this.cursors.left) ||
       Phaser.Input.Keyboard.JustDown(this.wasd.left)
@@ -278,18 +302,26 @@ export class DungeonScene extends Phaser.Scene {
     }
   }
 
+
+  
   private tryMove(dx: number, dy: number): void {
     const nextX = this.player.x + dx;
     const nextY = this.player.y + dy;
 
-    if (!this.isWalkable(nextX, nextY)) return;
+    if (!this.isWalkable(nextX, nextY)) {
+      return;
+    }
 
     this.player.moveTo(nextX, nextY, () => {
       this.checkCollectibles();
       this.checkEnemyCollisions();
       this.checkTrapCollisions();
+
+      // Allow the next tile movement while the touch direction is held.
+      this.touchMoveBlocked = false;
     });
   }
+
 
   // ---------------- COLLECTIBLES ----------------
 
@@ -493,6 +525,9 @@ export class DungeonScene extends Phaser.Scene {
   }
 
   private tryInteract(): void {
+    if (this.completed || this.isPaused || this.player.isMoving) {
+      return;
+    }
     const exit = this.findExit();
 
     if (!exit) return;
@@ -517,6 +552,9 @@ export class DungeonScene extends Phaser.Scene {
   
 
   private completeLevel(): void {
+    // Prevent completing the same level more than once.
+    if (this.completed) return;
+
     this.levelWon = true;
     this.completed = true;
     this.score += 500;
@@ -715,6 +753,63 @@ export class DungeonScene extends Phaser.Scene {
     this.gameOverText.setScrollFactor(0);
     this.gameOverText.setDepth(100);
   }
+  // ---------------  ------------------
+
+  
+
+
+  
+  public setTouchDirection(direction: { x: number; y: number } | null): void {
+    this.touchDirection = direction;
+    this.touchMoveBlocked = false;
+  }
+
+  public touchAction(
+    action: "attack" | "interact" | "potion" | "pause" | "restart" | "next"
+  ): void {
+    if (!this.sys.isActive()) return;
+
+    if (action === "restart") {
+      if (this.completed || this.isPaused) {
+        this.scene.restart({ levelId: this.currentLevel.id });
+      }
+      return;
+    }
+
+    if (action === "next") {
+      if (this.completed && this.levelWon && this.levelManager.hasNextLevel) {
+        this.scene.restart({ levelId: this.currentLevel.id + 1 });
+      }
+      return;
+    }
+
+    if (action === "pause") {
+      if (this.completed) return;
+
+      if (this.isPaused) {
+        this.resumeGame();
+      } else {
+        this.pauseGame();
+      }
+      return;
+    }
+
+    if (this.completed || this.isPaused) return;
+
+    switch (action) {
+      case "attack":
+        this.attack();
+        break;
+      case "interact":
+        this.tryInteract();
+        break;
+      case "potion":
+        this.usePotion();
+        break;
+    }
+  }
+
+
 
   // ---------------- INPUT ----------------
 

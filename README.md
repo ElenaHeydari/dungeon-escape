@@ -1,32 +1,140 @@
-# React + TypeScript + Vite
+# Dungeon Escape
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+A browser-based 2D dungeon adventure built with **Phaser 3, TypeScript, React, and Vite**. Explore dungeon rooms, collect items, avoid traps, defeat enemies, and find the exit.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **Tile-based movement** with keyboard and mobile touch controls
+- **Multiple levels** with progressively more challenging layouts
+- **Enemies** with patrol behavior, including Slimes and Skeletons
+- **Combat system** with adjacent attacks
+- **Health system** with temporary damage invulnerability
+- **Collectibles and inventory** including keys, potions, and treasure
+- **Traps and collision detection**
+- **Level progression** and score tracking
+- **Local save system** using IndexedDB
+- **Pause, restart, and level transition controls**
+- **Progressive Web App (PWA)** support for installation and offline use
 
-## React Compiler
+## Tech Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+| Technology | Purpose |
+|---|---|
+| React | User interface |
+| TypeScript | Application and game logic |
+| Phaser 3 | 2D game engine |
+| Vite | Development server and build tool |
+| Zustand | State management |
+| IndexedDB / idb | Local progress persistence |
+| vite-plugin-pwa | PWA support |
+| Vitest | Testing |
 
-## Expanding the Oxlint configuration
+## Getting Started
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+### Prerequisites
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+- Node.js
+- npm
+
+### Installation
+
+Clone the repository:
+
+```bash
+git clone https://github.com/ElenaHeydari/dungeon-escape.git
+cd dungeon-escape
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Install dependencies:
+
+```bash
+npm install
+```
+
+Start the development server:
+
+```bash
+npm run dev
+```
+
+Open the local URL printed by Vite in your browser.
+
+### Production Build
+
+```bash
+npm run build
+```
+
+Preview the production build locally:
+
+```bash
+npm run preview
+```
+
+## Controls
+
+### Keyboard
+
+| Key | Action |
+|---|---|
+| W / A / S / D | Move |
+| Arrow keys | Move |
+| Space | Attack |
+| E | Interact |
+| H | Use a potion |
+| Esc | Pause / Resume |
+| R | Restart |
+| N | Go to the next level after completing a level |
+
+### Mobile
+
+Use the on-screen directional pad and action buttons. Touch controls are displayed on touch-oriented or smaller screens.
+
+## Project Structure
+
+```text
+src/
+├── components/       # React UI components and touch controls
+├── game/
+│   ├── core/         # Phaser game configuration and core systems
+│   ├── entities/     # Player and enemy entities
+│   ├── maps/         # Level map data
+│   ├── scenes/       # Phaser scenes
+│   └── systems/      # Inventory, health, saving, and level systems
+├── styles/           # Application styles
+└── main.tsx          # Application entry point
+
+public/               # Static assets and PWA icons
+```
+
+*The structure above is a high-level overview; folders may evolve as development continues.*
+
+## Save Data
+
+Game progress is stored locally in the browser using IndexedDB. Saved progress is specific to the browser and device and is not automatically synchronized between devices.
+
+## Progressive Web App
+
+Dungeon Escape can be installed as a PWA on supported browsers. Once the application has been loaded and its assets cached, supported gameplay resources can be available offline.
+
+## Deployment
+
+The project is configured for deployment to **GitHub Pages** under the repository path:
+
+```text
+/dungeon-escape/
+```
+
+After deployment, the game will be available at:
+
+```text
+https://<YOUR_GITHUB_USERNAME>.github.io/dungeon-escape/
+```
+
+## Development Status
+
+Dungeon Escape is an ongoing portfolio project. New levels, gameplay improvements, and additional features may be added over time.
+
+## License
+
+No license has been assigned yet. Unless a license is added to this repository, all rights are reserved by the copyright holder.
