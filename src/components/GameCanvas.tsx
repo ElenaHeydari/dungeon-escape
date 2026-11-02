@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type RefObject } from "react";
 import * as THREE from "three";
 
 export type MoveInput = {
@@ -9,7 +9,7 @@ export type MoveInput = {
 };
 
 type GameCanvasProps = {
-  moveInput: React.RefObject<MoveInput>;
+  moveInput: RefObject<MoveInput>;
 };
 
 const WORLD_SIZE = 12;
@@ -75,11 +75,7 @@ export function GameCanvas({ moveInput }: GameCanvasProps) {
     });
     scene.add(grid);
 
-    const wallMaterial = new THREE.MeshStandardMaterial({
-      color: "#263746",
-      roughness: 0.82,
-      metalness: 0.12,
-    });
+    const wallMaterial = new THREE.MeshStandardMaterial({ color: "#263746", roughness: 0.82, metalness: 0.12 });
     const wallColliders: WallCollider[] = [];
 
     const addWall = (x: number, z: number, width: number, depth: number, height = 1.35) => {
@@ -92,16 +88,15 @@ export function GameCanvas({ moveInput }: GameCanvasProps) {
     };
 
     const edge = WORLD_SIZE / 2;
-    for (let i = -edge; i <= edge; i += 1) {
+    for (let i = -edge; i < edge; i += 1) {
       addWall(i + 0.5, -edge + 0.5, 1, 1);
       addWall(i + 0.5, edge - 0.5, 1, 1);
-      if (i > -edge && i < edge - 1) {
+      if (i > -edge) {
         addWall(-edge + 0.5, i + 0.5, 1, 1);
         addWall(edge - 0.5, i + 0.5, 1, 1);
       }
     }
 
-    // Low, chunky stone partitions make a small first-room exploration space.
     addWall(-1.5, -1.5, 3, 0.8);
     addWall(2.1, 0.2, 0.8, 3.2);
     addWall(-2.8, 2.1, 2.4, 0.8);
