@@ -27,6 +27,9 @@ function App() {
 
       <footer className="game-footer">
         <span>Move: WASD / Arrows</span>
+        <span>
+          Move: W/↑ ↗ | D/→ ↘ | S/↓ ↙ | A/← ↖
+        </span>
         <span>Attack: Space | Interact: E</span>
         <span>Potion: H | Pause: Esc | Restart: R</span>
       </footer>

@@ -5,6 +5,8 @@ import Phaser from "phaser";
 import { TileType } from "../maps/level01";
 
 import {
+  ISO_TILE_WIDTH,
+  ISO_TILE_HEIGHT,
   getIsometricMapOffset,
   getIsometricDepth,
   tileToWorld,
@@ -219,12 +221,31 @@ export class DungeonScene extends Phaser.Scene {
 
 
 
+
   private drawMap(): void {
     const map = this.currentLevel.map;
     const offset = getIsometricMapOffset(map);
 
     this.offsetX = offset.x;
     this.offsetY = offset.y;
+
+    const halfW = ISO_TILE_WIDTH / 2;
+    const halfH = ISO_TILE_HEIGHT / 2;
+    const wallHeight = 8;
+
+    const diamond = [
+      0, -halfH,
+      halfW, 0,
+      0, halfH,
+      -halfW, 0,
+    ];
+
+    const insetDiamond = [
+      0, -halfH + 3,
+      halfW - 6, 0,
+      0, halfH - 3,
+      -halfW + 6, 0,
+    ];
 
     const tiles: {
       x: number;
@@ -243,20 +264,6 @@ export class DungeonScene extends Phaser.Scene {
       a.x - b.x
     );
 
-    const diamond = [
-      0, -12,
-      24, 0,
-      0, 12,
-      -24, 0,
-    ];
-
-    const insetDiamond = [
-      0, -9,
-      18, 0,
-      0, 9,
-      -18, 0,
-    ];
-
     tiles.forEach(({ x, y, type }) => {
       const position = tileToWorld(
         x,
@@ -268,49 +275,68 @@ export class DungeonScene extends Phaser.Scene {
       const depth = getIsometricDepth(x, y);
 
       if (type === TileType.WALL) {
-        // Left wall face
+        // Soft shadow below the wall block
+        this.add.ellipse(
+          position.x,
+          position.y + 4,
+          43,
+          13,
+          0x000000,
+          0.22
+        ).setDepth(depth + 0.5);
+
+        // Left visible face
         this.add.polygon(
           position.x,
-          position.y - 2,
+          position.y,
           [
-            -24, -12,
-            0, 0,
-            0, 6,
-            -24, -6,
+            -halfW, -wallHeight,
+            0, halfH - wallHeight,
+            0, halfH,
+            -halfW, 0,
           ],
-          0x263642
+          0x1d2c35
         ).setDepth(depth + 1);
 
-        // Right wall face
+        // Right visible face
         this.add.polygon(
           position.x,
-          position.y - 2,
+          position.y,
           [
-            24, -12,
-            0, 0,
-            0, 6,
-            24, -6,
+            halfW, -wallHeight,
+            0, halfH - wallHeight,
+            0, halfH,
+            halfW, 0,
           ],
-          0x344957
+          0x263943
         ).setDepth(depth + 1);
 
-        // Stone top
+        // Dark wall top: visually distinct from walkable floor
         this.add.polygon(
           position.x,
-          position.y - 6,
+          position.y - wallHeight,
           diamond,
-          0x405866
+          0x293b45
         )
-          .setStrokeStyle(1, 0x627b88, 0.75)
+          .setStrokeStyle(1, 0x536b77, 0.9)
           .setDepth(depth + 2);
 
-        // Top surface highlight
+        // Subtle inset on the wall top
+        this.add.polygon(
+          position.x,
+          position.y - wallHeight,
+          insetDiamond,
+          0x465963,
+          0.18
+        ).setDepth(depth + 2.2);
+
+        // Small top-edge highlight
         this.add.line(
           position.x,
-          position.y - 6,
-          -13, 0,
+          position.y - wallHeight,
+          -12, 0,
           0, -6,
-          0x8195a0,
+          0x8da0a9,
           0.22
         ).setDepth(depth + 3);
 
@@ -319,20 +345,21 @@ export class DungeonScene extends Phaser.Scene {
 
       const isExit = type === TileType.EXIT;
 
-      const variation = (x * 7 + y * 13) % 4;
-
+      // Walkable floor is brighter than wall tops
       const floorColors = [
-        0x263b46,
-        0x293f4a,
-        0x223641,
-        0x2b414b,
+        0x3a5662,
+        0x36515d,
+        0x3d5964,
+        0x344f5b,
       ];
 
+      const variation = (x * 7 + y * 13) % floorColors.length;
+
       const floorColor = isExit
-        ? 0x245b58
+        ? 0x24665f
         : floorColors[variation];
 
-      // Main stone tile
+      // Main walkable tile
       this.add.polygon(
         position.x,
         position.y,
@@ -341,33 +368,32 @@ export class DungeonScene extends Phaser.Scene {
       )
         .setStrokeStyle(
           1,
-          isExit ? 0x45d6c5 : 0x344e5b,
-          0.5
+          isExit ? 0x65e7d2 : 0x718b95,
+          isExit ? 0.95 : 0.72
         )
         .setDepth(depth);
 
-      // Inner stone surface
+      // Inner surface makes each walkable cell easier to read
       this.add.polygon(
         position.x,
-        position.y - 0.5,
+        position.y - 0.3,
         insetDiamond,
-        isExit ? 0x286b64 : 0x2b424d,
-        0.22
+        isExit ? 0x45d6c5 : 0x8aa5ad,
+        isExit ? 0.20 : 0.09
       ).setDepth(depth + 0.1);
 
-      // Small decorative stone marks
+      // Decorative stone marks
       if (!isExit && (x * 3 + y * 5) % 5 === 0) {
         this.add.line(
           position.x - 5,
           position.y - 2,
           -3, 0,
           4, 2,
-          0x8da0a9,
-          0.18
+          0xa5b6bc,
+          0.22
         ).setDepth(depth + 0.2);
       }
 
-      // Exit lighting
       if (isExit) {
         this.add.ellipse(
           position.x,
@@ -375,22 +401,20 @@ export class DungeonScene extends Phaser.Scene {
           34,
           18,
           0x45d6c5,
-          0.12
+          0.16
         ).setDepth(depth + 0.3);
 
         this.add.polygon(
           position.x,
-          position.y - 1,
+          position.y,
           insetDiamond,
           0x45d6c5,
-          0.28
+          0.20
         ).setDepth(depth + 0.4);
       }
     });
-
-  
-    
   }
+
 
 
 
@@ -636,55 +660,116 @@ export class DungeonScene extends Phaser.Scene {
   }
 
   
+
   private createEnvironmentalEffects(): void {
     const map = this.currentLevel.map;
+    const rows = map.length;
+    const columns = map[0]?.length ?? 0;
 
-    let candidateIndex = 0;
-    let torchCount = 0;
+    const directions = [
+      { dx: 0, dy: -1 },
+      { dx: 1, dy: 0 },
+      { dx: 0, dy: 1 },
+      { dx: -1, dy: 0 },
+    ];
 
-    for (let y = 0; y < map.length; y++) {
-      for (let x = 0; x < map[y].length; x++) {
+    const candidates: {
+      wallX: number;
+      wallY: number;
+      floorX: number;
+      floorY: number;
+    }[] = [];
+
+    // Find interior wall cells that face a walkable corridor
+    for (let y = 1; y < rows - 1; y++) {
+      for (let x = 1; x < columns - 1; x++) {
         if (map[y][x] !== TileType.WALL) continue;
 
-        if (torchCount >= 6) break;
+        const walkableNeighbor = directions.find(
+          ({ dx, dy }) => {
+            const nx = x + dx;
+            const ny = y + dy;
 
-        const neighbors = [
-          map[y - 1]?.[x],
-          map[y + 1]?.[x],
-          map[y]?.[x - 1],
-          map[y]?.[x + 1],
-        ];
-
-        const bordersFloor = neighbors.some(
-          tile =>
-            tile !== undefined &&
-            tile !== TileType.WALL
+            return (
+              ny >= 0 &&
+              ny < rows &&
+              nx >= 0 &&
+              nx < columns &&
+              map[ny][nx] !== TileType.WALL
+            );
+          }
         );
 
-        if (!bordersFloor) continue;
+        if (!walkableNeighbor) continue;
 
-        const currentCandidate = candidateIndex++;
+        const wallNeighborCount = directions.filter(
+          ({ dx, dy }) => {
+            const nx = x + dx;
+            const ny = y + dy;
 
-        if (currentCandidate % 4 !== 0) continue;
+            return (
+              ny >= 0 &&
+              ny < rows &&
+              nx >= 0 &&
+              nx < columns &&
+              map[ny][nx] === TileType.WALL
+            );
+          }
+        ).length;
 
-        const position = tileToWorld(
-          x,
-          y,
-          this.offsetX,
-          this.offsetY
-        );
+        // Prefer wall sections that are part of an interior structure
+        if (wallNeighborCount < 2) continue;
 
-        this.createWallTorch(
-          position.x,
-          position.y - 10,
-          torchCount
-        );
-
-        torchCount++;
+        candidates.push({
+          wallX: x,
+          wallY: y,
+          floorX: x + walkableNeighbor.dx,
+          floorY: y + walkableNeighbor.dy,
+        });
       }
     }
 
-    // Magical particles near the entrance
+    // Distribute torches across the available interior walls
+    const torchCount = Math.min(5, candidates.length);
+
+    for (let i = 0; i < torchCount; i++) {
+      const index = torchCount === 1
+        ? Math.floor(candidates.length / 2)
+        : Math.round(
+            i * (candidates.length - 1) / (torchCount - 1)
+          );
+
+      const candidate = candidates[index];
+
+      const wallPosition = tileToWorld(
+        candidate.wallX,
+        candidate.wallY,
+        this.offsetX,
+        this.offsetY
+      );
+
+      const floorPosition = tileToWorld(
+        candidate.floorX,
+        candidate.floorY,
+        this.offsetX,
+        this.offsetY
+      );
+
+      // Place the torch at the shared edge facing the corridor
+      const torchX =
+        (wallPosition.x + floorPosition.x) / 2;
+
+      const torchY =
+        (wallPosition.y + floorPosition.y) / 2 - 3;
+
+      this.createWallTorch(
+        torchX,
+        torchY,
+        i
+      );
+    }
+
+    // Cool magical particles near the entrance
     const spawn = this.currentLevel.playerSpawn;
 
     const spawnPosition = tileToWorld(
@@ -724,6 +809,7 @@ export class DungeonScene extends Phaser.Scene {
       );
     }
   }
+
 
 
 

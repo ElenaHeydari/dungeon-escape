@@ -62,10 +62,10 @@ export function TouchControls({ game }: TouchControlsProps) {
   return (
     <section className="touch-controls" aria-label="Touch game controls">
       <div className="touch-dpad">
-        {directionButton("↑", 0, -1, "up")}
-        {directionButton("←", -1, 0, "left")}
-        {directionButton("→", 1, 0, "right")}
-        {directionButton("↓", 0, 1, "down")}
+        {directionButton("↗", 0, -1, "up")}
+        {directionButton("↖", -1, 0, "left")}
+        {directionButton("↘", 1, 0, "right")}
+        {directionButton("↙", 0, 1, "down")}
       </div>
 
       <div className="touch-actions">

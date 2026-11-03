@@ -89,11 +89,13 @@ body {
 .touch-dpad {
   display: grid;
   grid-template-columns: repeat(3, 54px);
-  grid-template-rows: repeat(2, 54px);
+  grid-template-rows: repeat(3, 54px);
   gap: 5px;
+
   grid-template-areas:
-    ". up ."
-    "left down right";
+    "left . up"
+    ". . ."
+    "down . right";
 }
 
 .touch-direction,
@@ -171,9 +173,9 @@ body {
 @media (max-width: 420px) {
   .touch-dpad {
     grid-template-columns: repeat(3, 46px);
-    grid-template-rows: repeat(2, 46px);
+    grid-template-rows: repeat(3, 46px);
   }
-
+  
   .touch-actions {
     gap: 6px;
   }

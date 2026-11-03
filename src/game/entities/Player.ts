@@ -84,7 +84,7 @@ export class Player {
 
 
     this.sprite.setDepth(
-    getEntityDepth(tileX, tileY, 10)
+    getEntityDepth(tileX, tileY, 4)
   );
   }
 
@@ -117,7 +117,7 @@ export class Player {
     );
 
     this.sprite.setDepth(
-      getEntityDepth(targetX, targetY, 10)
+      getEntityDepth(targetX, targetY, 4)
     );
 
     this.scene.tweens.add({
