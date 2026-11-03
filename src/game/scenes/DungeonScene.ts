@@ -22,7 +22,7 @@ import { SaveManager } from "../systems/SaveManager";
 
 import { HealthSystem } from "../systems/HealthSystem";
 import { Trap } from "../systems/Trap";
-
+const UI_DEPTH = 100_000;
 export class DungeonScene extends Phaser.Scene {
 
   private levelManager!: LevelManager;
@@ -59,7 +59,6 @@ export class DungeonScene extends Phaser.Scene {
 
   private hudText!: Phaser.GameObjects.Text;
   private messageText!: Phaser.GameObjects.Text;
-  private gameOverText?: Phaser.GameObjects.Text;
 
   private inventory!: Inventory;
   private potionKey!: Phaser.Input.Keyboard.Key;
@@ -67,7 +66,8 @@ export class DungeonScene extends Phaser.Scene {
 
   private isPaused = false;
   private pauseOverlay?: Phaser.GameObjects.Container;
-  
+  private gameOverOverlay?: Phaser.GameObjects.Container;
+  private isTransitioning = false;
   private touchDirection: { x: number; y: number } | null = null;
   private touchMoveBlocked = false;
 
@@ -89,6 +89,10 @@ export class DungeonScene extends Phaser.Scene {
     this.hasKey = false;
     this.score = 0;
 
+    this.isTransitioning = false;
+    this.pauseOverlay = undefined;
+    this.gameOverOverlay = undefined;
+
     this.collectibles = [];
     this.enemies = [];
     this.traps = [];
@@ -97,9 +101,11 @@ export class DungeonScene extends Phaser.Scene {
     this.health = new HealthSystem(3, 1000);
 
     this.cameras.main.setBackgroundColor("#101820");
+    this.cameras.main.fadeIn(450, 8, 16, 24);
 
     this.drawMap();
     this.createAmbientLights();
+    this.createEnvironmentalEffects();
     this.createPlayer();
     this.createCollectibles();
     this.createEnemies();
@@ -118,6 +124,7 @@ export class DungeonScene extends Phaser.Scene {
       this.traps.forEach(trap => trap.destroy());
 
       this.pauseOverlay?.destroy();
+      this.gameOverOverlay?.destroy();
 
       this.input.keyboard?.off(
         "keydown-H",
@@ -132,9 +139,7 @@ export class DungeonScene extends Phaser.Scene {
     // Handle completed state
     if (this.completed) {
       if (Phaser.Input.Keyboard.JustDown(this.restartKey)) {
-        this.scene.restart({
-          levelId: this.currentLevel.id
-        });
+        this.transitionToLevel(this.currentLevel.id);
         return;
       }
 
@@ -143,11 +148,9 @@ export class DungeonScene extends Phaser.Scene {
         Phaser.Input.Keyboard.JustDown(this.nextLevelKey) &&
         this.levelManager.hasNextLevel
       ) {
-        const nextLevelId = this.currentLevel.id + 1;
+        
 
-        this.scene.restart({
-          levelId: nextLevelId
-        });
+        this.transitionToLevel(this.currentLevel.id + 1);
 
         return;
       }
@@ -159,9 +162,7 @@ export class DungeonScene extends Phaser.Scene {
     // Handle paused state
     if (this.isPaused) {
       if (Phaser.Input.Keyboard.JustDown(this.restartKey)) {
-        this.scene.restart({
-          levelId: this.currentLevel.id
-        });
+        this.transitionToLevel(this.currentLevel.id);
         return;
       }
 
@@ -209,6 +210,8 @@ export class DungeonScene extends Phaser.Scene {
   }
 
 
+
+  
 
   // ---------------- MAP ----------------
 
@@ -485,6 +488,244 @@ export class DungeonScene extends Phaser.Scene {
       );
     }
   }
+
+  
+  private createWallTorch(
+    x: number,
+    y: number,
+    index: number
+  ): void {
+    const outerGlow = this.add.ellipse(
+      x,
+      y - 5,
+      52,
+      34,
+      0xf2b84b,
+      0.07
+    ).setDepth(930);
+
+    const innerGlow = this.add.ellipse(
+      x,
+      y - 7,
+      25,
+      18,
+      0xff963d,
+      0.13
+    ).setDepth(931);
+
+    const mount = this.add.rectangle(
+      x,
+      y + 3,
+      9,
+      13,
+      0x35434d
+    ).setDepth(940);
+
+    mount.setStrokeStyle(1, 0x71808a, 0.7);
+
+
+    const flame = this.add.triangle(
+      x,
+      y - 10,
+      0, -10,
+      -5, 5,
+      5, 5,
+      0xffa43b
+    ).setDepth(942);
+
+    const flameCore = this.add.triangle(
+      x,
+      y - 8,
+      0, -6,
+      -2.5, 3,
+      2.5, 3,
+      0xffe7a3
+    ).setDepth(943);
+
+    this.tweens.add({
+      targets: flame,
+      scaleX: 1.15,
+      scaleY: 1.3,
+      angle: 4,
+      duration: 180 + index * 25,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.easeInOut"
+    });
+
+    this.tweens.add({
+      targets: flameCore,
+      scaleY: 1.2,
+      alpha: 0.65,
+      duration: 240 + index * 20,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.easeInOut"
+    });
+
+    this.tweens.add({
+      targets: outerGlow,
+      alpha: 0.11,
+      scaleX: 1.18,
+      scaleY: 1.15,
+      duration: 900 + index * 40,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.easeInOut"
+    });
+
+    this.tweens.add({
+      targets: innerGlow,
+      alpha: 0.19,
+      duration: 650 + index * 30,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.easeInOut"
+    });
+
+    this.createMagicDust(
+      x,
+      y - 13,
+      0xffd17b,
+      944,
+      2,
+      9
+    );
+  }
+
+  
+  private createMagicDust(
+    centerX: number,
+    centerY: number,
+    color: number,
+    depth: number,
+    count: number,
+    spread: number
+  ): void {
+    for (let i = 0; i < count; i++) {
+      const offsetX =
+        ((i * 17) % (spread * 2)) - spread;
+
+      const offsetY = (i % 3) * 5;
+
+      const particle = this.add.circle(
+        centerX + offsetX,
+        centerY + offsetY,
+        i % 2 === 0 ? 1.5 : 2,
+        color,
+        0.65
+      );
+
+      particle
+        .setDepth(depth)
+        .setBlendMode(Phaser.BlendModes.ADD);
+
+      this.tweens.add({
+        targets: particle,
+        x: particle.x + (i % 2 === 0 ? 7 : -7),
+        y: particle.y - 20 - (i % 3) * 5,
+        alpha: 0.05,
+        scale: 0.4,
+        duration: 1400 + i * 220,
+        delay: i * 260,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.easeInOut"
+      });
+    }
+  }
+
+  
+  private createEnvironmentalEffects(): void {
+    const map = this.currentLevel.map;
+
+    let candidateIndex = 0;
+    let torchCount = 0;
+
+    for (let y = 0; y < map.length; y++) {
+      for (let x = 0; x < map[y].length; x++) {
+        if (map[y][x] !== TileType.WALL) continue;
+
+        if (torchCount >= 6) break;
+
+        const neighbors = [
+          map[y - 1]?.[x],
+          map[y + 1]?.[x],
+          map[y]?.[x - 1],
+          map[y]?.[x + 1],
+        ];
+
+        const bordersFloor = neighbors.some(
+          tile =>
+            tile !== undefined &&
+            tile !== TileType.WALL
+        );
+
+        if (!bordersFloor) continue;
+
+        const currentCandidate = candidateIndex++;
+
+        if (currentCandidate % 4 !== 0) continue;
+
+        const position = tileToWorld(
+          x,
+          y,
+          this.offsetX,
+          this.offsetY
+        );
+
+        this.createWallTorch(
+          position.x,
+          position.y - 10,
+          torchCount
+        );
+
+        torchCount++;
+      }
+    }
+
+    // Magical particles near the entrance
+    const spawn = this.currentLevel.playerSpawn;
+
+    const spawnPosition = tileToWorld(
+      spawn.x,
+      spawn.y,
+      this.offsetX,
+      this.offsetY
+    );
+
+    this.createMagicDust(
+      spawnPosition.x,
+      spawnPosition.y - 4,
+      0x45d6c5,
+      950,
+      4,
+      22
+    );
+
+    // Golden particles near the exit
+    const exit = this.findExit();
+
+    if (exit) {
+      const exitPosition = tileToWorld(
+        exit.x,
+        exit.y,
+        this.offsetX,
+        this.offsetY
+      );
+
+      this.createMagicDust(
+        exitPosition.x,
+        exitPosition.y - 5,
+        0xf2b84b,
+        950,
+        5,
+        22
+      );
+    }
+  }
+
+
 
 
 
@@ -929,44 +1170,101 @@ export class DungeonScene extends Phaser.Scene {
     this.messageText.setColor("#f2b84b");
   }
 
+  private transitionToLevel(levelId: number): void {
+    if (this.isTransitioning) return;
+
+    this.isTransitioning = true;
+
+    this.cameras.main.fadeOut(
+      420,
+      8,
+      16,
+      24
+    );
+
+    this.cameras.main.once(
+      "camerafadeoutcomplete",
+      () => {
+        this.scene.restart({
+          levelId
+        });
+      }
+    );
+  }
+
+
   // ---------------- Pause ---------------------
+
+
 
   private pauseGame(): void {
     this.isPaused = true;
-
     this.tweens.pauseAll();
 
     const background = this.add.rectangle(
-      400, 300, 800, 600, 0x000000, 0.75
+      400,
+      300,
+      800,
+      600,
+      0x050b12,
+      0.92
     );
 
+    const panel = this.add.rectangle(
+      400,
+      300,
+      430,
+      230,
+      0x17232d,
+      0.98
+    ).setStrokeStyle(2, 0x45d6c5, 0.65);
+
     const title = this.add.text(
-      400, 220, "PAUSED",
+      400,
+      250,
+      "PAUSED",
       {
         fontFamily: "Arial",
         fontSize: "42px",
+        fontStyle: "bold",
         color: "#45d6c5"
       }
     ).setOrigin(0.5);
 
+    const divider = this.add.rectangle(
+      400,
+      285,
+      230,
+      1,
+      0x526778,
+      0.8
+    );
+
     const instructions = this.add.text(
-      400, 310,
+      400,
+      325,
       "Press ESC to Resume\nPress R to Restart",
       {
         fontFamily: "Arial",
-        fontSize: "20px",
+        fontSize: "19px",
         color: "#e8eef2",
         align: "center",
-        lineSpacing: 12
+        lineSpacing: 13
       }
     ).setOrigin(0.5);
 
     this.pauseOverlay = this.add.container(
-      0, 0, [background, title, instructions]
+      0,
+      0,
+      [background, panel, title, divider, instructions]
     );
 
-    this.pauseOverlay.setDepth(200);
+    this.pauseOverlay
+      .setScrollFactor(0)
+      .setDepth(UI_DEPTH);
   }
+
+
 
   private resumeGame(): void {
     this.isPaused = false;
@@ -980,29 +1278,69 @@ export class DungeonScene extends Phaser.Scene {
 
   // ---------------- GAME OVER ----------------
 
-  private handleGameOver(): void {
-    if (this.completed) return;
 
-    this.completed = true;
 
-    this.gameOverText = this.add.text(
-      400,
-      300,
-      `GAME OVER\nFinal score: ${this.score}\nPress R to restart`,
-      {
-        fontFamily: "Arial",
-        fontSize: "28px",
-        color: "#e65b65",
-        align: "center",
-        backgroundColor: "#101820",
-        padding: { x: 20, y: 16 }
-      }
-    );
+private handleGameOver(): void {
+  if (this.completed) return;
 
-    this.gameOverText.setOrigin(0.5);
-    this.gameOverText.setScrollFactor(0);
-    this.gameOverText.setDepth(100);
-  }
+  this.completed = true;
+
+  const background = this.add.rectangle(
+    400,
+    300,
+    800,
+    600,
+    0x050b12,
+    0.92
+  );
+
+  const panel = this.add.rectangle(
+    400,
+    300,
+    460,
+    220,
+    0x17232d,
+    0.98
+  ).setStrokeStyle(2, 0xe65b65, 0.85);
+
+  const title = this.add.text(
+    400,
+    255,
+    "GAME OVER",
+    {
+      fontFamily: "Arial",
+      fontSize: "38px",
+      fontStyle: "bold",
+      color: "#e65b65"
+    }
+  ).setOrigin(0.5);
+
+  const details = this.add.text(
+    400,
+    325,
+    `Final Score: ${this.score}\nPress R to Restart`,
+    {
+      fontFamily: "Arial",
+      fontSize: "19px",
+      color: "#e8eef2",
+      align: "center",
+      lineSpacing: 12
+    }
+  ).setOrigin(0.5);
+
+
+  this.gameOverOverlay = this.add.container(
+    0,
+    0,
+    [background, panel, title, details]
+  );
+
+  this.gameOverOverlay
+    .setScrollFactor(0)
+    .setDepth(UI_DEPTH);
+}
+
+
   // ---------------  ------------------
 
   
@@ -1021,14 +1359,14 @@ export class DungeonScene extends Phaser.Scene {
 
     if (action === "restart") {
       if (this.completed || this.isPaused) {
-        this.scene.restart({ levelId: this.currentLevel.id });
+        this.transitionToLevel( this.currentLevel.id );
       }
       return;
     }
 
     if (action === "next") {
       if (this.completed && this.levelWon && this.levelManager.hasNextLevel) {
-        this.scene.restart({ levelId: this.currentLevel.id + 1 });
+        this.transitionToLevel(this.currentLevel.id + 1);
       }
       return;
     }
