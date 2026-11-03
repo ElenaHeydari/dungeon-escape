@@ -60,6 +60,19 @@ export class Trap {
       [glow, plate, spike1, spike2, spike3]
     );
 
+    
+    scene.tweens.add({
+      targets: glow,
+      alpha: 0.3,
+      scaleX: 1.2,
+      scaleY: 1.2,
+      duration: 550,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.easeInOut"
+    });
+
+
     this.sprite.setDepth(
       getEntityDepth(x, y, 3)
     );

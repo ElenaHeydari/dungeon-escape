@@ -110,6 +110,18 @@ export class Collectible {
       parts
     );
 
+    
+    scene.tweens.add({
+      targets: glow,
+      alpha: 0.32,
+      scale: 1.2,
+      duration: 700,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.easeInOut"
+    });
+
+
     this.sprite.setDepth(
       getEntityDepth(tileX, tileY, 6)
     );

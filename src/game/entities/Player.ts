@@ -70,6 +70,18 @@ export class Player {
       position.y,
       [shadow, outerGlow,innerGlow, cape, body, head, visor]
     );
+    
+    this.scene.tweens.add({
+      targets: shadow,
+      scaleX: 1.15,
+      scaleY: 0.85,
+      alpha: 0.25,
+      duration: 650,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.easeInOut"
+    });
+
 
     this.sprite.setDepth(
     getEntityDepth(tileX, tileY, 10)

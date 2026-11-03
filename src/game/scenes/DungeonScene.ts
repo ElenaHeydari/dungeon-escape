@@ -99,6 +99,7 @@ export class DungeonScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor("#101820");
 
     this.drawMap();
+    this.createAmbientLights();
     this.createPlayer();
     this.createCollectibles();
     this.createEnemies();
@@ -384,8 +385,69 @@ export class DungeonScene extends Phaser.Scene {
       }
     });
 
-    // Ambient light near player spawn
+  
+    
+  }
+
+
+
+  private createAmbientLights(): void {
     const spawn = this.currentLevel.playerSpawn;
+    const exit = this.findExit();
+
+    const createLight = (
+      x: number,
+      y: number,
+      color: number,
+      radiusX: number,
+      radiusY: number,
+      depth: number,
+      duration: number
+    ) => {
+      const outer = this.add.ellipse(
+        x,
+        y,
+        radiusX * 2,
+        radiusY * 2,
+        color,
+        0.045
+      );
+
+      outer.setDepth(depth);
+
+      const inner = this.add.ellipse(
+        x,
+        y,
+        radiusX,
+        radiusY,
+        color,
+        0.075
+      );
+
+      inner.setDepth(depth + 0.1);
+
+      this.tweens.add({
+        targets: outer,
+        alpha: 0.09,
+        scaleX: 1.18,
+        scaleY: 1.18,
+        duration,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.easeInOut"
+      });
+
+      this.tweens.add({
+        targets: inner,
+        alpha: 0.13,
+        scaleX: 1.12,
+        scaleY: 1.12,
+        duration: duration * 0.8,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.easeInOut"
+      });
+    };
 
     const spawnPosition = tileToWorld(
       spawn.x,
@@ -394,17 +456,35 @@ export class DungeonScene extends Phaser.Scene {
       this.offsetY
     );
 
-    this.add.ellipse(
+    createLight(
       spawnPosition.x,
       spawnPosition.y,
-      72,
-      38,
       0x45d6c5,
-      0.035
-    ).setDepth(900);
+      42,
+      22,
+      900,
+      1900
+    );
+
+    if (exit) {
+      const exitPosition = tileToWorld(
+        exit.x,
+        exit.y,
+        this.offsetX,
+        this.offsetY
+      );
+
+      createLight(
+        exitPosition.x,
+        exitPosition.y,
+        0xf2b84b,
+        38,
+        20,
+        900,
+        1500
+      );
+    }
   }
-
-
 
 
 

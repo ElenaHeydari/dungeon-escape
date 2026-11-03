@@ -60,6 +60,18 @@ export abstract class GameEntity {
       [shadow, glow, body, highlight, leftEye, rightEye]
     );
 
+    
+    this.scene.tweens.add({
+      targets: shadow,
+      scaleX: 1.12,
+      alpha: 0.28,
+      duration: 750,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.easeInOut"
+    });
+
+
     this.sprite.setDepth(
       getEntityDepth(x, y, 8)
     );
